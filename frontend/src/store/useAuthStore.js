@@ -3,10 +3,9 @@ import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
+// const BASE_URL = import.meta.env.MODE === "development" ? "https://chatapp-xq9i.onrender.com" : "/";
 const BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "https://chatapp-xq9i.onrender.com"
-    : "/";
+  import.meta.env.VITE_BASE_URL || "https://chatapp-xq9i.onrender.com";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -20,9 +19,10 @@ export const useAuthStore = create((set, get) => ({
   checkAuth: async () => {
     try {
       const res = await axiosInstance.get("/auth/check");
-
-      set({ authUser: res.data });
-      get().connectSocket();
+      if (res && res.data) {
+        set({ authUser: res.data });
+        get().connectSocket();
+      }
     } catch (error) {
       console.log("Error in checkAuth:", error);
       set({ authUser: null });
@@ -35,11 +35,17 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-      set({ authUser: res.data });
-      toast.success("Account created successfully");
-      get().connectSocket();
+      if (res && res.data) {
+        set({ authUser: res.data });
+        toast.success("Account created successfully");
+        get().connectSocket();
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (error) {
-      toast.error(error.response.data.message);
+      console.error("Signup error:", error);
+      const errorMessage = error.response?.data?.message || error.message || "Failed to create account";
+      toast.error(errorMessage);
     } finally {
       set({ isSigningUp: false });
     }
@@ -49,12 +55,17 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
-      set({ authUser: res.data });
-      toast.success("Logged in successfully");
-
-      get().connectSocket();
+      if (res && res.data) {
+        set({ authUser: res.data });
+        toast.success("Logged in successfully");
+        get().connectSocket();
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (error) {
-      toast.error(error.response.data.message);
+      console.error("Login error:", error);
+      const errorMessage = error.response?.data?.message || error.message || "Failed to login";
+      toast.error(errorMessage);
     } finally {
       set({ isLoggingIn: false });
     }
@@ -67,7 +78,9 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged out successfully");
       get().disconnectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      console.error("Logout error:", error);
+      const errorMessage = error.response?.data?.message || error.message || "Failed to logout";
+      toast.error(errorMessage);
     }
   },
 
@@ -75,11 +88,16 @@ export const useAuthStore = create((set, get) => ({
     set({ isUpdatingProfile: true });
     try {
       const res = await axiosInstance.put("/auth/update-profile", data);
-      set({ authUser: res.data });
-      toast.success("Profile updated successfully");
+      if (res && res.data) {
+        set({ authUser: res.data });
+        toast.success("Profile updated successfully");
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (error) {
-      console.log("error in update profile:", error);
-      toast.error(error.response.data.message);
+      console.error("Error in update profile:", error);
+      const errorMessage = error.response?.data?.message || error.message || "Failed to update profile";
+      toast.error(errorMessage);
     } finally {
       set({ isUpdatingProfile: false });
     }
@@ -93,6 +111,7 @@ export const useAuthStore = create((set, get) => ({
       query: {
         userId: authUser._id,
       },
+      withCredentials: true
     });
     socket.connect();
 

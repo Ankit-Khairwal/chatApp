@@ -28,9 +28,11 @@ export const signup = async (req, res) => {
     });
 
     if (newUser) {
-      // generate jwt token here
-      generateToken(newUser._id, res);
+      // Save user first
       await newUser.save();
+      
+      // Then generate token
+      generateToken(newUser._id, res);
 
       res.status(201).json({
         _id: newUser._id,
@@ -50,6 +52,10 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
   const { email, password } = req.body;
   try {
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -77,7 +83,12 @@ export const login = async (req, res) => {
 
 export const logout = (req, res) => {
   try {
-    res.cookie("jwt", "", { maxAge: 0 });
+    res.cookie("jwt", "", { 
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production"
+    });
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.log("Error in logout controller", error.message);
