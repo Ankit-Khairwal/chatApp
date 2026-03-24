@@ -2,10 +2,16 @@ import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
+import { isDatabaseConnected } from "../lib/db.js";
+import jwt from "jsonwebtoken";
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
   try {
+    if (!isDatabaseConnected()) {
+      return res.status(503).json({ message: "Service unavailable. Database not connected." });
+    }
+
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -52,6 +58,10 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
   const { email, password } = req.body;
   try {
+    if (!isDatabaseConnected()) {
+      return res.status(503).json({ message: "Service unavailable. Database not connected." });
+    }
+
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
@@ -121,7 +131,20 @@ export const updateProfile = async (req, res) => {
 
 export const checkAuth = (req, res) => {
   try {
-    res.status(200).json(req.user);
+    const token = req.cookies?.jwt;
+    if (!token) return res.status(200).json(null);
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (!decoded?.userId) return res.status(200).json(null);
+
+      User.findById(decoded.userId)
+        .select("-password")
+        .then((user) => res.status(200).json(user || null))
+        .catch(() => res.status(200).json(null));
+    } catch {
+      return res.status(200).json(null);
+    }
   } catch (error) {
     console.log("Error in checkAuth controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });

@@ -3,9 +3,14 @@ import Message from "../models/message.model.js";
 
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
+import { isDatabaseConnected } from "../lib/db.js";
 
 export const getUsersForSidebar = async (req, res) => {
   try {
+    if (!isDatabaseConnected()) {
+      return res.status(503).json({ message: "Service unavailable. Database not connected." });
+    }
+
     const loggedInUserId = req.user._id;
     const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
 
@@ -18,6 +23,10 @@ export const getUsersForSidebar = async (req, res) => {
 
 export const getMessages = async (req, res) => {
   try {
+    if (!isDatabaseConnected()) {
+      return res.status(503).json({ message: "Service unavailable. Database not connected." });
+    }
+
     const { id: userToChatId } = req.params;
     const myId = req.user._id;
 
@@ -37,6 +46,10 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
+    if (!isDatabaseConnected()) {
+      return res.status(503).json({ message: "Service unavailable. Database not connected." });
+    }
+
     const { text, image } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;

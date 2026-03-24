@@ -13,7 +13,7 @@ import { app, server } from "./src/lib/socket.js";
 
 dotenv.config();
 
-const PORT = process.env.PORT;
+const PORT = Number(process.env.PORT) || 5001;
 const __dirname = path.resolve();
 
 // Define allowed origins
@@ -57,7 +57,20 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
+server.on("error", (err) => {
+  if (err?.code === "EADDRINUSE") {
+    console.error(
+      `Port ${PORT} is already in use. Stop the other backend process or set PORT to a free port in backend/.env`
+    );
+    process.exit(1);
+  }
+  console.error("Server failed to start:", err?.message || err);
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
   console.log("server is running on PORT:" + PORT);
-  connectDB();
 });
+
+// DB is optional for boot; endpoints will return 503 until connected.
+connectDB();

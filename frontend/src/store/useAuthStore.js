@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 
 // const BASE_URL = import.meta.env.MODE === "development" ? "https://chatapp-xq9i.onrender.com" : "/";
 const BASE_URL =
-  import.meta.env.VITE_BASE_URL || "https://chatapp-xq9i.onrender.com";
+  import.meta.env.VITE_BASE_URL || "http://localhost:5001";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -18,13 +18,16 @@ export const useAuthStore = create((set, get) => ({
 
   checkAuth: async () => {
     try {
-      const res = await axiosInstance.get("/auth/check");
+      const res = await axiosInstance.get("/auth/check", { timeout: 2500 });
       if (res && res.data) {
         set({ authUser: res.data });
         get().connectSocket();
       }
     } catch (error) {
-      console.log("Error in checkAuth:", error);
+      // 401 means user is not logged in; keep silent to avoid noisy console output.
+      if (error?.response?.status !== 401) {
+        console.error("Error in checkAuth:", error);
+      }
       set({ authUser: null });
     } finally {
       set({ isCheckingAuth: false });
@@ -63,7 +66,6 @@ export const useAuthStore = create((set, get) => ({
         throw new Error("Invalid response from server");
       }
     } catch (error) {
-      console.error("Login error:", error);
       const errorMessage = error.response?.data?.message || error.message || "Failed to login";
       toast.error(errorMessage);
     } finally {
@@ -123,5 +125,6 @@ export const useAuthStore = create((set, get) => ({
   },
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
+    set({ socket: null, onlineUsers: [] });
   },
 }));

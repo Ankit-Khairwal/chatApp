@@ -7,7 +7,14 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://chat-app-seven-psi-67.vercel.app"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:3000",
+      "https://chatapp-xq9i.onrender.com",
+      "https://chatapp-xq9i.vercel.app"
+    ],
+    credentials: true
   },
 });
 

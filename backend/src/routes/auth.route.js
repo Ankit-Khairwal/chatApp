@@ -10,6 +10,7 @@ router.post("/logout", logout);
 
 router.put("/update-profile", protectRoute, updateProfile);
 
-router.get("/check", protectRoute, checkAuth);
+// "check" should not be noisy: return 200 + null when logged out
+router.get("/check", checkAuth);
 
 export default router;
